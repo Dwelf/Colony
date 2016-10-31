@@ -1,45 +1,100 @@
+var HarvesterBodies =
+    [
+        [WORK, MOVE],
+        [WORK, WORK, MOVE],
+        [WORK, WORK, WORK, MOVE]        
+    ];
+
+var BuilderBodies =
+    [
+        [WORK, MOVE, CARRY]
+    ];
+
+var UpgraderBodies =
+    [
+        [WORK, MOVE, CARRY],
+        [WORK, WORK, MOVE, CARRY, CARRY],
+        [WORK, WORK, WORK, WORK, WORK, WORK, MOVE, MOVE, CARRY, CARRY],
+    ];
+
+var TransporterBodies =
+    [
+        [CARRY, MOVE],
+        [CARRY, MOVE, MOVE],
+        [CARRY, CARRY, MOVE, MOVE],
+        [CARRY, CARRY, MOVE, MOVE, MOVE],
+        [CARRY, CARRY, CARRY, MOVE, MOVE, MOVE],
+    ];
+
+var RepairBodies =
+    [
+        [WORK, MOVE, CARRY],
+        [WORK, WORK, MOVE, CARRY],
+        [WORK, WORK, MOVE, CARRY]
+    ];
+
+var ScoutBodies =
+    [
+        [MOVE]
+    ];
+
+var TankBodies =
+    [
+        [MOVE, TOUGH],
+        [MOVE, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH]
+    ];
+
+
+var ChampionBodies =
+    [
+        [ATTACK, MOVE]
+    ];
 
 var Harvester = {
-    0: [WORK,MOVE],
-    1: [WORK, WORK,MOVE],
-    2: [WORK,WORK,WORK, MOVE],
-    3: [WORK,WORK,WORK,MOVE,MOVE],
-    scale:false
+    Designs: HarvesterBodies,
+    Scale: false
 }
-var Builder = 
-{
-    0: [WORK,MOVE,CARRY],
-     scale:true
-}
+var Builder =
+    {
+        Designs: BuilderBodies,
+        Scale: false
+    }
 
-var Upgrader = 
-{
-    0: [WORK,MOVE,CARRY],
-    1: [WORK,MOVE,MOVE,CARRY,CARRY],
-    2: [WORK,WORK,MOVE,MOVE,CARRY,CARRY,MOVE,MOVE,CARRY,CARRY],
-     scale:true
-}
+var Upgrader =
+    {
+        Designs: UpgraderBodies,
+        Scale: false
+    }
 
 var Transporter =
-{
-    0:[CARRY.MOVE],
-    1:[CARRY,MOVE,MOVE],
-    scale:true
-}
+    {
+        Designs: TransporterBodies,
+        Scale: false
+    }
 
-var Repair = 
-{
-    0: [WORK,MOVE,CARRY],
-    1: [WORK,WORK,MOVE,CARRY],
-    2: [WORK,WORK,MOVE,CARRY],
-     scale:true
-}
+var Repair =
+    {
+        Designs: RepairBodies,
+        Scale: false
+    }
 
-var Champion = 
-{
-    0: [ATTACK,MOVE],
-     scale:true
-}
+var Champion =
+    {
+        Designs: ChampionBodies,
+        Scale: true
+    }
+
+var Scout =
+    {
+        Designs: ScoutBodies,
+        Scale: true
+    }
+
+var Tank =
+    {
+        Designs: TankBodies,
+        Scale: true
+    }
 
 var RolesBodies = [
     Harvester,
@@ -47,12 +102,13 @@ var RolesBodies = [
     Builder,
     Transporter,
     Champion,
-    Repair
+    Repair,
+    Scout,
+    Tank
 ];
 
-
-
 var populationControl = {
+
     CostPart: function (part) {
         var cost = 0;
         switch (part) {
@@ -86,58 +142,61 @@ var populationControl = {
         }
         return cost;
     },
-    DesignCreeper: function (body, room) {
-        if(Memory.RoleBodyCosts == undefined)
-        {
+    DesignCreeper: function (role, room) {
+        var roomData = room.memory.roomData;        
+        if (Memory.TurnsTryingToBuild > 150) {
+            return RolesBodies[role].Designs[0];
+        }
+        if (Memory.RoleBodyCosts == undefined) {
             Memory.RoleBodyCosts = [];
-            for(var i =0; i < RolesBodies.length;  i++)
-            {
+            for (var i = 0; i < RolesBodies.length; i++) {
                 Memory.RoleBodyCosts.push([]);
-                for(var k = 0; k< RolesBodies[i].length; k++)
-                {
-                      Memory.RoleBodyCosts[i][k] = CostCreeper(RolesBodies[i][k]);
+                for (var k = 0; k < RolesBodies[i].Designs.length; k++) {
+                    Memory.RoleBodyCosts[i][k] = this.CostCreeper(RolesBodies[i].Designs[k]);
                 }
             }
         }
 
-        var level = Memory.Rooms[room.name].Level;
-
-        if (level < 2) {
-            return body;
-        }
-
-        if (body.length > 2) {
-            level--;
-        }
-
         var bodyDesign = [];
+        var bodyBase = [];
+        var scale = 0;
 
-        var i = 0;
-        for (var part in body) {
-            for (var i = 0; i < level; i++) {
-                bodyDesign.push(body[part]);
+        for (var i = RolesBodies[role].Designs.length - 1; i > -1; i--) {
+            scale = Math.floor(roomData.AverageResource / Memory.RoleBodyCosts[role][i]);
+
+            if (scale > 0) {
+                bodyBase = RolesBodies[role].Designs[i];
+                scale = RolesBodies[role].Scale ? scale : 1
+                i = 0;
             }
         }
-
-        if (this.CostCreeper(bodyDesign) <= room.energyCapacityAvailable) {
-
-            return bodyDesign;
+        for (var i = 0; i < scale; i++) {
+            bodyDesign = bodyDesign.concat(bodyBase);
         }
-        else if (Memory.TurnsTryingToBuild > 90) {
-            return body;
-        }
+
+        return bodyDesign;
     },
-    CreateCreeper: function (body, role, room) {
-        if (room.energyAvailable < 150) {
+    CreateCreeper: function (role, room) {        
+        if (room.energyAvailable < 100) {
             return;
         }
-
-        body = this.DesignCreeper(body, room);
-
-        if (Game.spawns['Spawn1'].canCreateCreep(body, undefined) == 0) {
-            Game.spawns['Spawn1'].createCreep(body, undefined, { role: role, room: room.name });
+        var body = []
+        var spawn = undefined;
+        for (var name in Game.spawns) {
+            var spawn = Game.spawns[name];
+            if (spawn.room == room && spawn.spawning == null) {
+                spawn = spawn;
+            }
+        }       
+        if (spawn == undefined) {
+            return;
+        }
+        body = this.DesignCreeper(role, room);
+       
+        if (spawn.canCreateCreep(body, undefined) == 0) {
+            spawn.createCreep(body, undefined, { role: role, room: room.name, Level: room.memory.roomData.Level });
             Memory.TurnsTryingToBuild = 0;
-            console.log("Current Level : " + Memory.Rooms[room.name].Level);
+            console.log("Current Level : " + room.memory.roomData.Level);
             console.log("Creating " + role + " with body [" + body + "]");
         }
         else {

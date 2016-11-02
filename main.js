@@ -1,27 +1,20 @@
 var roleHarvester = require('role.harvester');
+var basicHarvester = require('role.BasicHarvester');
 var roleUpgrader = require('role.upgrader');
 var roleBuilder = require('role.builder');
-var roleChampion = require('role.Champion')
+var roleChampion = require('role.Champion');
 var roletransporter = require('role.Transporter');
+var roleTank = require('role.Tank');
 var roleRepair = require('role.Repair');
 var roleTower = require('role.Tower');
 var roleScout = require('role.Scout');
 var popControl = require('CreepPopulationControl');
 var memoryManagement = require('MemoryManagement');
 var roomManagement = require('RoomManagement');
+var roomEconomyManagement = require('RoomEconomyManagement');
 var helperManagement = require('roomHelper');
-
+var Roles = require('Roles');
 var _ = require('lodash');
-var Roles = {
-    Harvester: 0,
-    Upgrader: 1,
-    Builder: 2,
-    Transporter: 3,
-    Champion: 4,
-    Repair: 5,
-    Scout: 6,
-    Tank: 7
-};
 
 
 
@@ -38,7 +31,6 @@ module.exports.RunTasks = function () {
     for (var name in Game.creeps) {
         var creep = Game.creeps[name];
         var roomData = creep.room.memory.roomData;
-
         var helper = helperManagement.Helpers(creep.room.name);
         roomData.CreepTotal++;
         switch (creep.memory.role) {
@@ -76,6 +68,14 @@ module.exports.RunTasks = function () {
                 roleScout.run(creep, helper);
                 // roomData.Repairs++;
                 break;
+            case Roles.Tank:
+                roleTank.run(creep, helper);
+                 roomData.Tanks++;
+                break;
+            case Roles.BasicHarvester:
+                basicHarvester.run(creep, helper);
+                roomData.BasicHarvesters++;
+                break;
         }
     }
 
@@ -86,10 +86,9 @@ module.exports.RunTasks = function () {
         //var helper = helpers[name];
         var roomData = room.memory.roomData;
 
-        var all = helperManagement.Helpers(creep.room.name).AllStructures(creep.room);
+        var all = helperManagement.Helpers(name).AllStructures(room);
 
-        var towers = _.filter(all,function(structure)
-        {
+        var towers = _.filter(all, function (structure) {
             return structure.structureType == STRUCTURE_TOWER;
         });
 
@@ -126,27 +125,13 @@ module.exports.SpawnCreep = function () {
         var room = Game.rooms[name];
         var roomData = room.memory.roomData;
         var helper = helperManagement.Helpers(name)
-        
+
         if (room.find(FIND_HOSTILE_CREEPS).length > 1) {
             popControl.CreateCreeper(Roles.Champion, room);
             room.controller.activateSafeMode();
         }
-        else {          
-            if (roomData.Transporters < roomData.Harvesters*2 && roomData.Transporters < roomData.TransporterMax) {
-                popControl.CreateCreeper(Roles.Transporter, room);
-            }
-            else if (roomData.Harvesters < roomData.HarvesterMax) {
-                popControl.CreateCreeper(Roles.Harvester, room);
-            }
-            else if (roomData.Upgraders < Math.ceil(roomData.Level / 3)) {
-                popControl.CreateCreeper(Roles.Upgrader, room);
-            }
-            else if (helper.ConstructionSites(room).length > 0 &&  roomData.Builders <  Math.ceil(roomData.Level / 3)) {
-                popControl.CreateCreeper(Roles.Builder, room);
-            }
-            else if (roomData.Level > 1 && roomData.Repairs < 1) {
-                popControl.CreateCreeper(Roles.Repair, room);
-            }
+        else {
+            roomEconomyManagement.ManageRoomEconomy(room, roomData);
         }
     }
 }
@@ -158,17 +143,17 @@ module.exports.Assign = function () {
         var roomData = Game.rooms[name].memory.roomData;
         var sources = roomData.Sources;
 
-       
         for (var source in sources) {
             if (roomData.unAssigned.Harvesters.length > 0) {
+               
                 if (roomData.HarvesterSourceAssingment[sources[source]] < roomData.HarvesterSourceSourceMax[sources[source]]) {
-                    for (var creep in roomData.unAssigned.Harvesters) {                       
+                    for (var creep in roomData.unAssigned.Harvesters) {
                         var creeper = Game.creeps[roomData.unAssigned.Harvesters.pop()];
                         creeper.memory.AssignedResource = sources[source];
                     }
                 }
             }
-            if (roomData.unAssigned.Transporters.length > 0) {               
+            if (roomData.unAssigned.Transporters.length > 0) {
                 if (roomData.TransportersSourceAssingment[sources[source]] < roomData.TransportersSourceMax[sources[source]]) {
                     for (var creep in roomData.unAssigned.Transporters) {
                         var creeper = Game.creeps[roomData.unAssigned.Transporters.pop()];
@@ -191,5 +176,4 @@ module.exports.loop = function () {
     module.exports.SpawnCreep();
     module.exports.Assign();
     helperManagement.CleanUp();
-
 }

@@ -2,11 +2,8 @@ var roleHarvester = {
 	/** @param {Creep} creep **/
 	run: function (creep, helper) {
 	
-			var source = Game.getObjectById("58133a93eac46a5651635d4a");
-		var attempt = creep.pickup(source);
-
-		console.log(attempt);
-	}
+		var attempt = creep.moveTo(new RoomPosition(33,17,'E39S15'));
+		}
 };
 
 module.exports = roleHarvester;

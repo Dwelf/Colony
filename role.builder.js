@@ -43,8 +43,7 @@ var roleBuilder = {
                     });
 
                     if (creep.withdraw(targets[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                         PathFinder.use(true);
-                         console.log(creep.moveTo(targets[0]));
+                        console.log(creep.moveTo(targets[0]));
                     }
                 }
             }
@@ -56,7 +55,6 @@ var roleBuilder = {
                 });
                 if (targets.length) {
                     if (creep.build(targets[0]) == ERR_NOT_IN_RANGE) {
-                        PathFinder.use(true);
                         creep.moveTo(targets[0]);
                     }
                 }
@@ -74,7 +72,6 @@ var roleBuilder = {
 
             if (creep.memory.upgrading) {
                 if (creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
-                    PathFinder.use(true);
                     creep.moveTo(creep.room.controller);
                 }
             }
@@ -84,10 +81,11 @@ var roleBuilder = {
                     targets = _.sortBy(targets, function (structure) {
                         return creep.pos.getRangeTo(structure);
                     });
+
                     if (creep.withdraw(targets[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                        PathFinder.use(true);
                         creep.moveTo(targets[0]);
                     }
+
                 }
             }
         }

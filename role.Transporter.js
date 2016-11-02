@@ -12,7 +12,7 @@ var roletransporter = {
             this.WaitingForStore(creep, helper);
         }
     },
-    Gathering: function (creep, helper) {        
+    Gathering: function (creep, helper) {
         creep.memory.state = 0;
         if (_.sum(creep.carry) == creep.carryCapacity) {
             this.WaitingForStore(creep, helper);;
@@ -33,7 +33,7 @@ var roletransporter = {
             }
         }
     },
-    GatheringFromSource: function (creep, helper) {       
+    GatheringFromSource: function (creep, helper) {
         creep.memory.state = 3;
         if (_.sum(creep.carry) == creep.carryCapacity) {
             this.WaitingForStore(creep, helper);
@@ -56,7 +56,7 @@ var roletransporter = {
             return;
         }
     },
-    WaitingForStore: function (creep, helper) {      
+    WaitingForStore: function (creep, helper) {
         creep.memory.state = 1;
         creep.moveTo(Game.flags["TransporterStandBy"]);
         var targets = [];
@@ -71,15 +71,18 @@ var roletransporter = {
             targets = helper.StorageSites(creep.room);
         }
 
+        if (targets.length == 0 || targets == undefined) {
+            return;
+        }
+
         targets = _.sortBy(targets, function (structure) {
             return creep.pos.getRangeTo(structure)
         });
-        if (targets.length > 0) {
-            creep.memory.StorageLocation = targets[0].id;                    
-            this.MovingToStore(creep, helper)
-        }
+
+        creep.memory.StorageLocation = targets[0].id;
+        this.MovingToStore(creep, helper)
     },
-    MovingToStore: function (creep, helper) {       
+    MovingToStore: function (creep, helper) {
         creep.memory.state = 2;
         if (_.sum(creep.carry) == 0) {
             this.GatheringFromSource(creep, helper);
@@ -88,6 +91,14 @@ var roletransporter = {
 
         var target = Game.getObjectById(creep.memory.StorageLocation);
         var CanTransfer = false;
+       
+        if(target == undefined || target == null)
+        {
+            console.log("Error " + creep.name + " : " + creep.memory.StorageLocation)
+             creep.memory.state = 1;
+             return;
+        }
+
 
         if (target.structureType == STRUCTURE_CONTAINER || target.structureType == STRUCTURE_STORAGE) {
             CanTransfer = (_.sum(target.store) < target.storeCapacity);
@@ -96,7 +107,7 @@ var roletransporter = {
             CanTransfer = (target.energy < target.energyCapacity);
         }
 
-        if (CanTransfer == false) {           
+        if (CanTransfer == false) {
             this.WaitingForStore(creep, helper);
             return;
         }
@@ -111,7 +122,7 @@ var roletransporter = {
         //if transfered
         if (attemptTransfer == 0) {
             // if still has energy left          
-            if (_.sum(creep.carry) > 0) { 
+            if (_.sum(creep.carry) > 0) {
                 // look for another store              
                 creep.memory.state = 1;
             } // go back to Gathering
